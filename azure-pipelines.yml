@@ -1,0 +1,67 @@
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+  - stage: InstallAndBuild
+    displayName: Build Frontend and Backend
+    jobs:
+      - job: BuildFrontend
+        displayName: 'Build Frontend'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Use Node.js'
+
+          - script: |
+              cd frontend
+              npm install
+              npm run build
+            displayName: 'Install & Build Frontend'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: 'frontend/build'
+              artifactName: 'frontend-build'
+              publishLocation: 'Container'
+
+      - job: BuildBackend
+        displayName: 'Build Backend'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '18.x'
+            displayName: 'Use Node.js'
+
+          - script: |
+              cd backend
+              npm install
+            displayName: 'Install Backend'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: 'backend'
+              artifactName: 'backend-src'
+              publishLocation: 'Container'
+
+  - stage: SonarMock
+    displayName: 'Mock SonarQube Stage'
+    jobs:
+      - job: SonarFake
+        steps:
+          - script: echo "Pretending to run SonarQube..."
+            displayName: 'Mock SonarQube Analysis'
+
+  - stage: TestMock
+    displayName: 'Mock Test Stage'
+    jobs:
+      - job: RunFakeTests
+        steps:
+          - script: echo "Running dummy tests..."
+            displayName: 'Mock Unit Test + Coverage'
