@@ -24,8 +24,14 @@ stages:
             displayName: 'Use Node.js 20.x'
 
           - script: |
+              echo "=== Current directory and structure ==="
+              cd
+              dir
+              
+              echo "=== Entering frontend directory ==="
               cd frontend
-
+              dir
+              
               echo "=== Writing .env ==="
               echo VITE_APP_NAME="WI Invoice" > .env
               echo VITE_APP_TITLE="" >> .env
@@ -33,33 +39,39 @@ stages:
               echo VITE_APP_DEBUG=true >> .env
               echo VITE_APP_LOG_LEVEL=debug >> .env
               echo VITE_BASE_URL=http://localhost:3001/api >> .env
-
+              
               echo "=== Showing .env ==="
               type .env
-
+              
               echo "=== Checking Node and NPM ==="
               node -v
               npm -v
-
+              
+              echo "=== Checking package.json ==="
+              type package.json
+              
               echo "=== Running npm install ==="
               npm install
               if %errorlevel% neq 0 exit /b %errorlevel%
-
-              echo "=== Running vite build ==="
-              cmd /C "set NODE_ENV=production && npm run build -- --debug --logLevel info"
+              
+              echo "=== Setting environment and running build ==="
+              set NODE_ENV=production
+              npm run build
               if %errorlevel% neq 0 (
                 echo "❌ Vite build failed"
                 exit /b %errorlevel%
               )
-
+              
               echo "=== Checking dist folder ==="
               if exist dist (
+                echo "✅ dist folder found"
                 dir dist
               ) else (
                 echo "❌ dist folder not found"
+                dir
                 exit /b 1
               )
-            displayName: 'Build Frontend (Windows + NODE_ENV Fix)'
+            displayName: 'Build Frontend (Windows + Debugging)'
 
           - task: PublishBuildArtifacts@1
             inputs:
