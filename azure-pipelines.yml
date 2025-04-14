@@ -15,18 +15,23 @@ stages:
         pool:
           name: local
         steps:
-          - checkout: self 
+          - checkout: self
 
           - task: NodeTool@0
             inputs:
               versionSpec: '20.x'
-            displayName: 'Use Node.js'
+            displayName: 'Use Node.js 20.x'
 
           - script: |
               cd frontend
+              echo "VITE_API_URL=http://localhost:3000" > .env  # Add if needed
               npm install
-              npm run build
-            displayName: 'Install & Build Frontend'
+              NODE_ENV=production npm run build -- --debug
+              if [ ! -d "dist" ]; then
+                echo "❌ Build failed: dist folder not found"
+                exit 1
+              fi
+            displayName: 'Install & Build Frontend (Vite)'
 
           - task: PublishBuildArtifacts@1
             inputs:
