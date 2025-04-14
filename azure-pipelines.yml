@@ -1,5 +1,6 @@
 trigger:
   - main
+
 pool:
   name: local
 
@@ -71,7 +72,7 @@ stages:
         pool:
           name: local
         steps:
-          - checkout: self  
+          - checkout: self
 
           - task: NodeTool@0
             inputs:
@@ -87,7 +88,7 @@ stages:
             inputs:
               pathToPublish: 'backend'
               artifactName: 'backend-src'
-              publishLocation: 'Container'  
+              publishLocation: 'Container'
 
   - stage: SonarQubeAnalysis
     displayName: 'Run SonarQube Code Analysis'
@@ -123,3 +124,25 @@ stages:
         steps:
           - script: echo "Running dummy tests..."
             displayName: 'Mock Unit Test + Coverage'
+
+  - stage: Deliver
+    displayName: 'Deliver Artifact'
+    jobs:
+      - job: DeliverJob
+        displayName: 'Deliver Job'
+        pool:
+          name: local
+        steps:
+          - script: echo "Delivering backend-src artifact..."
+            displayName: 'Mock Deliver Step'
+
+  - stage: DeployDev
+    displayName: 'Deploy to Dev Environment'
+    jobs:
+      - job: DevDeployJob
+        displayName: 'Dev Deploy'
+        pool:
+          name: local
+        steps:
+          - script: echo "Deploying to Dev environment on port 3001..."
+            displayName: 'Dev Deployment Step'
