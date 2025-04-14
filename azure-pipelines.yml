@@ -30,7 +30,7 @@ stages:
 
           - task: PublishBuildArtifacts@1
             inputs:
-              pathToPublish: 'frontend/build'
+              pathToPublish: 'frontend/dist'
               artifactName: 'frontend-build'
               publishLocation: 'Container'
 
