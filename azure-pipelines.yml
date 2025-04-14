@@ -24,14 +24,24 @@ stages:
 
           - script: |
               cd frontend
-              echo "VITE_API_URL=http://localhost:3000" > .env  # Add if needed
+              echo "VITE_APP_NAME=\"WI Invoice\"" > .env
+              echo "VITE_APP_TITLE=\"\"" >> .env
+              echo "VITE_APP_ENV=" >> .env
+              echo "VITE_APP_DEBUG=true" >> .env
+              echo "VITE_APP_LOG_LEVEL=debug" >> .env
+              echo "VITE_BASE_URL=http://localhost:3001/api" >> .env
+
               npm install
-              NODE_ENV=production npm run build -- --debug
+              NODE_ENV=production npm run build -- --debug --logLevel info
+
+              echo "Build output:"
+              ls -la dist || echo "❌ dist folder not found"
+
               if [ ! -d "dist" ]; then
                 echo "❌ Build failed: dist folder not found"
                 exit 1
               fi
-            displayName: 'Install & Build Frontend (Vite)'
+            displayName: 'Build Frontend with Vite .env'
 
           - task: PublishBuildArtifacts@1
             inputs:
