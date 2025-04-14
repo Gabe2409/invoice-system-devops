@@ -45,8 +45,7 @@ stages:
               if %errorlevel% neq 0 exit /b %errorlevel%
 
               echo "=== Running vite build ==="
-              set NODE_ENV=production
-              npm run build -- --debug --logLevel info
+              cmd /C "set NODE_ENV=production && npm run build -- --debug --logLevel info"
               if %errorlevel% neq 0 (
                 echo "❌ Vite build failed"
                 exit /b %errorlevel%
@@ -59,7 +58,7 @@ stages:
                 echo "❌ dist folder not found"
                 exit /b 1
               )
-            displayName: 'Build Frontend (Windows Compatible)'
+            displayName: 'Build Frontend (Windows + NODE_ENV Fix)'
 
           - task: PublishBuildArtifacts@1
             inputs:
