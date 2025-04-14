@@ -47,9 +47,6 @@ stages:
               node -v
               npm -v
               
-              echo "=== Checking package.json ==="
-              type package.json
-              
               echo "=== Running npm install ==="
               npm install
               if %errorlevel% neq 0 exit /b %errorlevel%
@@ -71,7 +68,7 @@ stages:
                 dir
                 exit /b 1
               )
-            displayName: 'Build Frontend (Windows + Debugging)'
+            displayName: 'Build Frontend (Windows)'
 
           - task: PublishBuildArtifacts@1
             inputs:
@@ -126,16 +123,78 @@ stages:
                 -Dsonar.login=$(SONAR_TOKEN)
             displayName: 'Run SonarQube CLI Scanner'
 
-  - stage: TestMock
-    displayName: 'Mock Test Stage'
+  - stage: Test
+    displayName: 'Run Tests'
     jobs:
-      - job: RunFakeTests
-        displayName: 'Mock Tests'
+      - job: FrontendTests
+        displayName: 'Frontend Tests'
         pool:
           name: local
         steps:
-          - script: echo "Running dummy tests..."
-            displayName: 'Mock Unit Test + Coverage'
+          - checkout: self
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Use Node.js'
+
+          - script: |
+              cd frontend
+              npm install
+              npm test -- --coverage
+            displayName: 'Run Frontend Tests with Coverage'
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'frontend/junit.xml'
+              mergeTestResults: true
+              testRunTitle: 'Frontend Tests'
+            displayName: 'Publish Test Results'
+            condition: succeededOrFailed()
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: 'frontend/coverage/cobertura-coverage.xml'
+              reportDirectory: 'frontend/coverage'
+            displayName: 'Publish Code Coverage'
+            condition: succeededOrFailed()
+
+      - job: BackendTests
+        displayName: 'Backend Tests'
+        pool:
+          name: local
+        steps:
+          - checkout: self
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Use Node.js'
+
+          - script: |
+              cd backend
+              npm install
+              npm test -- --coverage
+            displayName: 'Run Backend Tests with Coverage'
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'backend/junit.xml'
+              mergeTestResults: true
+              testRunTitle: 'Backend Tests'
+            displayName: 'Publish Test Results'
+            condition: succeededOrFailed()
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: 'backend/coverage/cobertura-coverage.xml'
+              reportDirectory: 'backend/coverage'
+            displayName: 'Publish Code Coverage'
+            condition: succeededOrFailed()
 
   - stage: Deliver
     displayName: 'Deliver Artifact'
@@ -145,16 +204,157 @@ stages:
         pool:
           name: local
         steps:
-          - script: echo "Delivering backend-src artifact..."
-            displayName: 'Mock Deliver Step'
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'frontend-build'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Frontend Artifact'
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'backend-src'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Backend Artifact'
+
+          - script: |
+              echo "Creating release package..."
+              mkdir -p $(Build.ArtifactStagingDirectory)/release
+              cp -r $(System.ArtifactsDirectory)/frontend-build/* $(Build.ArtifactStagingDirectory)/release/public
+              cp -r $(System.ArtifactsDirectory)/backend-src/* $(Build.ArtifactStagingDirectory)/release/
+              echo "Release package created successfully"
+            displayName: 'Package Release Artifacts'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)/release'
+              artifactName: 'wi-invoice-release'
+              publishLocation: 'Container'
+            displayName: 'Publish Release Package'
 
   - stage: DeployDev
     displayName: 'Deploy to Dev Environment'
+    dependsOn: Deliver
     jobs:
       - job: DevDeployJob
         displayName: 'Dev Deploy'
         pool:
           name: local
         steps:
-          - script: echo "Deploying to Dev environment on port 3001..."
-            displayName: 'Dev Deployment Step'
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'wi-invoice-release'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Release Package'
+
+          - script: |
+              echo "Deploying to Dev environment on port 3001..."
+              mkdir -p $(System.DefaultWorkingDirectory)/deploy/dev
+              cp -r $(System.ArtifactsDirectory)/wi-invoice-release/* $(System.DefaultWorkingDirectory)/deploy/dev/
+              
+              echo "Starting application on port 3001..."
+              cd $(System.DefaultWorkingDirectory)/deploy/dev
+              echo "PORT=3001" > .env
+              echo "NODE_ENV=development" >> .env
+              
+              # Mock the actual deployment - in a real scenario you'd start the app
+              echo "Application deployed to Dev environment at http://localhost:3001"
+            displayName: 'Deploy to Dev Environment'
+
+  - stage: DeployQA
+    displayName: 'Deploy to QA Environment'
+    dependsOn: DeployDev
+    jobs:
+      - job: QADeployJob
+        displayName: 'QA Deploy'
+        pool:
+          name: local
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'wi-invoice-release'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Release Package'
+
+          - script: |
+              echo "Deploying to QA environment on port 3002..."
+              mkdir -p $(System.DefaultWorkingDirectory)/deploy/qa
+              cp -r $(System.ArtifactsDirectory)/wi-invoice-release/* $(System.DefaultWorkingDirectory)/deploy/qa/
+              
+              echo "Starting application on port 3002..."
+              cd $(System.DefaultWorkingDirectory)/deploy/qa
+              echo "PORT=3002" > .env
+              echo "NODE_ENV=qa" >> .env
+              
+              # Mock the actual deployment
+              echo "Application deployed to QA environment at http://localhost:3002"
+            displayName: 'Deploy to QA Environment'
+
+  - stage: DeployStaging
+    displayName: 'Deploy to Staging Environment'
+    dependsOn: DeployQA
+    jobs:
+      - job: StagingDeployJob
+        displayName: 'Staging Deploy'
+        pool:
+          name: local
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'wi-invoice-release'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Release Package'
+
+          - script: |
+              echo "Deploying to Staging environment on port 3003..."
+              mkdir -p $(System.DefaultWorkingDirectory)/deploy/staging
+              cp -r $(System.ArtifactsDirectory)/wi-invoice-release/* $(System.DefaultWorkingDirectory)/deploy/staging/
+              
+              echo "Starting application on port 3003..."
+              cd $(System.DefaultWorkingDirectory)/deploy/staging
+              echo "PORT=3003" > .env
+              echo "NODE_ENV=staging" >> .env
+              
+              # Mock the actual deployment
+              echo "Application deployed to Staging environment at http://localhost:3003"
+            displayName: 'Deploy to Staging Environment'
+
+  - stage: DeployProduction
+    displayName: 'Deploy to Production Environment'
+    dependsOn: DeployStaging
+    jobs:
+      - job: ProdDeployJob
+        displayName: 'Production Deploy'
+        pool:
+          name: local
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              artifactName: 'wi-invoice-release'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Release Package'
+
+          - script: |
+              echo "Deploying to Production environment on port 3000..."
+              mkdir -p $(System.DefaultWorkingDirectory)/deploy/prod
+              cp -r $(System.ArtifactsDirectory)/wi-invoice-release/* $(System.DefaultWorkingDirectory)/deploy/prod/
+              
+              echo "Starting application on port 3000..."
+              cd $(System.DefaultWorkingDirectory)/deploy/prod
+              echo "PORT=3000" > .env
+              echo "NODE_ENV=production" >> .env
+              
+              # Mock the actual deployment
+              echo "Application deployed to Production environment at http://localhost:3000"
+            displayName: 'Deploy to Production Environment'
