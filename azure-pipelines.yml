@@ -89,16 +89,30 @@ stages:
               artifactName: 'backend-src'
               publishLocation: 'Container'  
 
-  - stage: SonarMock
-    displayName: 'Mock SonarQube Stage'
+  - stage: SonarQubeAnalysis
+    displayName: 'Run SonarQube Code Analysis'
     jobs:
-      - job: SonarFake
-        displayName: 'Mock Sonar'
+      - job: SonarQubeScan
+        displayName: 'SonarQube Scanner'
         pool:
           name: local
         steps:
-          - script: echo "Pretending to run SonarQube..."
-            displayName: 'Mock SonarQube Analysis'
+          - checkout: self
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Use Node.js'
+
+          - script: |
+              npm install -g sonarqube-scanner
+              echo Running SonarQube analysis...
+              sonar-scanner ^
+                -Dsonar.projectKey=wi-invoice ^
+                -Dsonar.sources=frontend,backend ^
+                -Dsonar.host.url=http://localhost:9000 ^
+                -Dsonar.login=$(SONAR_TOKEN)
+            displayName: 'Run SonarQube Scanner'
 
   - stage: TestMock
     displayName: 'Mock Test Stage'
