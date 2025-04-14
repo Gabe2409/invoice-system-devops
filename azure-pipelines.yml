@@ -105,21 +105,13 @@ stages:
             displayName: 'Use Node.js'
 
           - script: |
-              npm install -g sonarqube-scanner
-
-              echo Running SonarQube analysis...
-
-              npx sonar-scanner ^
+              echo Running Sonar Scanner...
+              sonar-scanner ^
                 -Dsonar.projectKey=wi-invoice ^
                 -Dsonar.sources=frontend,backend ^
                 -Dsonar.host.url=http://localhost:9000 ^
                 -Dsonar.login=$(SONAR_TOKEN)
-              
-              if %errorlevel% neq 0 (
-                echo "❌ SonarQube analysis failed"
-                exit /b %errorlevel%
-              )
-            displayName: 'Run SonarQube Scanner'
+            displayName: 'Run SonarQube CLI Scanner'
 
   - stage: TestMock
     displayName: 'Mock Test Stage'
