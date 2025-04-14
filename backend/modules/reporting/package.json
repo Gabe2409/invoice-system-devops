@@ -1,0 +1,16 @@
+{
+  "name": "reporting-module",
+  "version": "1.0.0",
+  "description": "Advanced reporting functionality for transaction management system",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "pdfkit": "^0.13.0",
+    "mongoose": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "private": true
+}

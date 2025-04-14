@@ -1,0 +1,15 @@
+MONGO_URI=
+JWT_SECRET=
+PORT=3001
+NODE_ENV=development
+FRONTEND_URL=
+FRONTEND_INTERNAL_URL=
+
+# SMTP
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_password
+EMAIL_FROM=noreply@yourbusiness.com
+EMAIL_FROM_NAME=Your Business Name
