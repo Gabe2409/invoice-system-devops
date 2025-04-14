@@ -26,35 +26,40 @@ stages:
               cd frontend
 
               echo "=== Writing .env ==="
-              echo 'VITE_APP_NAME="WI Invoice"' > .env
-              echo 'VITE_APP_TITLE=""' >> .env
-              echo 'VITE_APP_ENV=' >> .env
-              echo 'VITE_APP_DEBUG=true' >> .env
-              echo 'VITE_APP_LOG_LEVEL=debug' >> .env
-              echo 'VITE_BASE_URL=http://localhost:3001/api' >> .env
+              echo VITE_APP_NAME="WI Invoice" > .env
+              echo VITE_APP_TITLE="" >> .env
+              echo VITE_APP_ENV= >> .env
+              echo VITE_APP_DEBUG=true >> .env
+              echo VITE_APP_LOG_LEVEL=debug >> .env
+              echo VITE_BASE_URL=http://localhost:3001/api >> .env
 
               echo "=== Showing .env ==="
-              cat .env
+              type .env
 
               echo "=== Checking Node and NPM ==="
               node -v
               npm -v
 
               echo "=== Running npm install ==="
-              npm install || { echo '❌ npm install failed'; exit 1; }
+              npm install
+              if %errorlevel% neq 0 exit /b %errorlevel%
 
               echo "=== Running vite build ==="
-              NODE_ENV=production npm run build -- --debug --logLevel info || {
-                echo '❌ Vite build failed';
-                exit 1;
-              }
+              set NODE_ENV=production
+              npm run build -- --debug --logLevel info
+              if %errorlevel% neq 0 (
+                echo "❌ Vite build failed"
+                exit /b %errorlevel%
+              )
 
               echo "=== Checking dist folder ==="
-              ls -la dist || {
-                echo '❌ dist folder not found after build';
-                exit 1;
-              }
-            displayName: 'Build Frontend (Verbose + .env)'
+              if exist dist (
+                dir dist
+              ) else (
+                echo "❌ dist folder not found"
+                exit /b 1
+              )
+            displayName: 'Build Frontend (Windows Compatible)'
 
           - task: PublishBuildArtifacts@1
             inputs:
